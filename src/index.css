@@ -6,6 +6,7 @@
 
 @layer base {
   :root {
+    /* LIGHT MODE (keep clean but not focus) */
     --background: 210 20% 98%;
     --foreground: 220 25% 10%;
 
@@ -36,6 +37,7 @@
 
     --radius: 0.75rem;
 
+    /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 220 10% 40%;
     --sidebar-primary: 168 60% 40%;
@@ -45,51 +47,76 @@
     --sidebar-border: 220 13% 93%;
     --sidebar-ring: 168 60% 40%;
 
-    /* Custom tokens */
+    /* Status */
     --success: 152 60% 42%;
-    --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 14%;
     --info: 210 80% 52%;
-    --info-foreground: 0 0% 100%;
 
-    --shadow-card: 0 1px 3px 0 hsl(220 25% 10% / 0.04), 0 1px 2px -1px hsl(220 25% 10% / 0.04);
-    --shadow-card-hover: 0 4px 12px 0 hsl(220 25% 10% / 0.06), 0 2px 4px -1px hsl(220 25% 10% / 0.04);
+    /* Shadows */
+    --shadow-card: 0 1px 3px 0 hsl(220 25% 10% / 0.04),
+    0 1px 2px -1px hsl(220 25% 10% / 0.04);
+
+    --shadow-card-hover: 0 4px 12px 0 hsl(220 25% 10% / 0.06),
+    0 2px 4px -1px hsl(220 25% 10% / 0.04);
 
     font-family: 'Inter', system-ui, sans-serif;
   }
 
+  /* 🔥 PREMIUM DARK MODE (THIS FIXES YOUR UI) */
   .dark {
-    --background: 222 30% 8%;
-    --foreground: 210 20% 96%;
-    --card: 222 25% 11%;
-    --card-foreground: 210 20% 96%;
-    --popover: 222 25% 11%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 168 60% 45%;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 96%;
+
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 96%;
+
+    --popover: 0 0% 8%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 160 84% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 16%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 55%;
-    --accent: 168 40% 14%;
-    --accent-foreground: 168 50% 70%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 20% 96%;
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 168 60% 45%;
-    --sidebar-background: 222 25% 10%;
-    --sidebar-foreground: 220 10% 60%;
-    --sidebar-primary: 168 60% 45%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 90%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 0 0% 14%;
+    --accent-foreground: 0 0% 90%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 14%;
+    --input: 0 0% 14%;
+    --ring: 160 84% 45%;
+
+    /* SIDEBAR (IMPORTANT DIFFERENCE) */
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 65%;
+    --sidebar-primary: 160 84% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 168 40% 14%;
-    --sidebar-accent-foreground: 168 50% 70%;
-    --sidebar-border: 220 20% 16%;
-    --sidebar-ring: 168 60% 45%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 12%;
+    --sidebar-ring: 160 84% 45%;
+
+    /* STATUS COLORS */
+    --success: 152 70% 45%;
+    --warning: 40 95% 55%;
+    --info: 210 90% 60%;
+
+    /* 🔥 REAL DEPTH SHADOWS */
+    --shadow-card: 0 0 0 1px hsl(0 0% 100% / 0.03),
+    0 10px 30px hsl(0 0% 0% / 0.6);
+
+    --shadow-card-hover: 0 0 0 1px hsl(0 0% 100% / 0.06),
+    0 12px 40px hsl(0 0% 0% / 0.8);
   }
 }
 
+/* BASE STYLES */
 @layer base {
   * {
     @apply border-border;
@@ -101,5 +128,21 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+}
+
+/* 🔥 PREMIUM UTILITIES (USE THESE IN YOUR COMPONENTS) */
+@layer utilities {
+  .card-premium {
+    @apply bg-card border border-border rounded-xl;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-premium:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .text-muted {
+    color: hsl(var(--muted-foreground));
   }
 }

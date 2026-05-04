@@ -1,347 +1,363 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Plus, Search, MoreHorizontal, Eye, Pencil, Trash2, Send, Download, X, CheckCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { MoreHorizontal, CheckCircle, Download, Trash2, Plus, Search } from "lucide-react";
+import { toast } from "sonner";
+
 import { DashboardLayout } from "@/components/DashboardLayout";
-import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { apiGet, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { ds, tk, pill } from "@/lib/ds";
+import { apiDelete, apiGet, apiPatch, apiPost, ApiError } from "@/lib/api";
+import { getClients, type Client as ApiClient } from "@/lib/clients";
 
 type InvoiceStatus = "paid" | "pending" | "overdue" | "draft";
-type FilterTab = "all" | InvoiceStatus;
 
-type ClientObject = {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-};
-
-type Invoice = {
+interface Invoice {
   id: string;
-  client: ClientObject | string;
+  number: string;
+  client: string;
+  clientInitials: string;
   amount: number;
+  issued: string;
+  due: string;
   status: InvoiceStatus;
+}
+
+interface NewInvoiceForm {
+  clientId: string;
+  amount: string;
+  issueDate: string;
   dueDate: string;
+  description: string;
+}
+
+type ApiInvoice = {
+  id: number;
+  amount: number;
+  status: string;
+  issueDate?: string;
+  dueDate?: string;
+  clientId?: number;
+  clientName?: string;
 };
 
-const filterTabs: { label: string; value: FilterTab }[] = [
-  { label: "All", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Paid", value: "paid" },
-  { label: "Overdue", value: "overdue" },
-];
+const INITIAL_INVOICES: Invoice[] = [];
 
-const getClientName = (client: ClientObject | string): string => {
-  if (typeof client === "object") return client?.name ?? "";
-  return client ?? "";
-};
+function fmt(n: number) {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+}
 
-const getClientEmail = (client: ClientObject | string): string => {
-  if (typeof client === "object") return client?.email ?? "";
-  return "";
-};
+function StatusBadge({ status }: { status: InvoiceStatus }) {
+  const dark = true;
+  const p = pill(status, dark);
+  return (
+    <span
+      className="px-2.5 py-0.5 rounded-full text-[11px] font-medium border"
+      style={{ backgroundColor: p.bg, color: p.text, borderColor: p.border }}
+    >
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
 
-const Invoices = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [clients, setClients] = useState<ClientObject[]>([]);
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+function initialsFromName(name: string) {
+  return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+}
+
+export default function InvoicesPage() {
+  const ui = tk(true);
+  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [clients, setClients] = useState<ApiClient[]>([]);
+  const [filter, setFilter] = useState<"all" | InvoiceStatus>("all");
   const [search, setSearch] = useState("");
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<NewInvoiceForm>({
     clientId: "",
     amount: "",
-    status: "pending",
+    issueDate: "",
     dueDate: "",
+    description: "",
   });
 
   useEffect(() => {
-    Promise.all([
-      apiGet<Invoice[]>("/api/clients/invoices"),
-      apiGet<ClientObject[]>("/api/clients"),
-    ])
-        .then(([inv, cls]) => {
-          setInvoices(inv);
-          setClients(cls);
-        })
-        .catch((err) => setError(err.message))
-        .finally(() => setLoading(false));
+    async function loadData() {
+      setLoading(true);
+      try {
+        const clientData = await getClients();
+        setClients(clientData);
+
+        const allInvoices = await apiGet<ApiInvoice[]>("/api/clients/invoices");
+        const mappedInvoices: Invoice[] = allInvoices.map((inv) => {
+          const clientName = inv.clientName || clientData.find((c) => c.id === inv.clientId)?.name || "Client";
+          return {
+            id: String(inv.id),
+            number: `INV-${String(inv.id).padStart(3, "0")}`,
+            client: clientName,
+            clientInitials: initialsFromName(clientName),
+            amount: Number(inv.amount),
+            issued: inv.issueDate ?? "",
+            due: inv.dueDate ?? "",
+            status: String(inv.status || "PENDING").toLowerCase() as InvoiceStatus,
+          };
+        });
+
+        mappedInvoices.sort((a, b) => Number(b.id) - Number(a.id));
+        setInvoices(mappedInvoices);
+      } catch (err) {
+        toast.error(err instanceof ApiError ? err.message : "Failed to load invoices.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadData();
   }, []);
+
+  const handleMarkAsPaid = async (id: string) => {
+    try {
+      await apiPatch(`/api/clients/invoices/${id}/paid`);
+      setInvoices((prev) => prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv)));
+      toast.success("Invoice updated to Paid");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to update invoice.");
+    } finally {
+      setActiveMenu(null);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
       await apiDelete(`/api/clients/invoices/${id}`);
       setInvoices((prev) => prev.filter((inv) => inv.id !== id));
+      toast.success("Invoice deleted");
     } catch (err) {
-      console.error("Delete failed:", err);
-    }
-  };
-
-  const handleMarkPaid = async (id: string) => {
-    try {
-      const updated = await apiPatch<Invoice>(`/api/clients/invoices/${id}/paid`);
-      setInvoices((prev) =>
-          prev.map((inv) => (inv.id === id ? { ...inv, status: "paid" } : inv))
-      );
-    } catch (err) {
-      console.error("Mark paid failed:", err);
-    }
-  };
-
-  const handleAddInvoice = async () => {
-    if (!form.clientId || !form.amount || !form.dueDate) return;
-    setSaving(true);
-    try {
-      const newInvoice = await apiPost<Invoice>(
-          `/api/clients/${form.clientId}/invoices`,
-          {
-            amount: parseFloat(form.amount),
-            status: form.status.toUpperCase(),
-            dueDate: form.dueDate,
-          }
-      );
-      setInvoices((prev) => [...prev, newInvoice]);
-      setShowAddDialog(false);
-      setForm({ clientId: "", amount: "", status: "pending", dueDate: "" });
-    } catch (err) {
-      console.error("Add invoice failed:", err);
+      toast.error(err instanceof ApiError ? err.message : "Failed to delete invoice.");
     } finally {
-      setSaving(false);
+      setActiveMenu(null);
+    }
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!form.clientId) {
+      toast.error("Select a client.");
+      return;
+    }
+    if (!form.amount || Number(form.amount) <= 0) {
+      toast.error("Enter a valid amount.");
+      return;
+    }
+    if (!form.issueDate || !form.dueDate) {
+      toast.error("Issue and due date are required.");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const created = await apiPost<{ id: number; amount: number; status: string; issueDate: string; dueDate: string }>(
+        `/api/clients/${form.clientId}/invoices`,
+        {
+          amount: Number(form.amount),
+          issueDate: form.issueDate,
+          dueDate: form.dueDate,
+          description: form.description.trim() || undefined,
+          status: "PENDING",
+        }
+      );
+
+      const client = clients.find((c) => String(c.id) === form.clientId);
+      const nextInvoice: Invoice = {
+        id: String(created.id),
+        number: `INV-${String(created.id).padStart(3, "0")}`,
+        client: client?.name ?? "Client",
+        clientInitials: initialsFromName(client?.name ?? "Client"),
+        amount: Number(created.amount),
+        issued: created.issueDate,
+        due: created.dueDate,
+        status: String(created.status).toLowerCase() as InvoiceStatus,
+      };
+
+      setInvoices((prev) => [nextInvoice, ...prev]);
+      setShowCreate(false);
+      setForm({ clientId: "", amount: "", issueDate: "", dueDate: "", description: "" });
+      toast.success("Invoice created.");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Failed to create invoice.");
+    } finally {
+      setCreating(false);
     }
   };
 
   const filtered = invoices.filter((inv) => {
-    const matchesFilter = activeFilter === "all" || inv.status === activeFilter;
-    const clientName = getClientName(inv.client);
-    const matchesSearch =
-        inv.id?.toString().toLowerCase().includes(search.toLowerCase()) ||
-        clientName.toLowerCase().includes(search.toLowerCase());
-    return matchesFilter && matchesSearch;
+    const matchStatus = filter === "all" || inv.status === filter;
+    const q = search.toLowerCase();
+    return matchStatus && (!q || inv.client.toLowerCase().includes(q) || inv.number.toLowerCase().includes(q));
   });
 
-  const counts = {
-    all: invoices.length,
-    pending: invoices.filter((i) => i.status === "pending").length,
-    paid: invoices.filter((i) => i.status === "paid").length,
-    overdue: invoices.filter((i) => i.status === "overdue").length,
-  };
-
   return (
-      <DashboardLayout
-          title="Invoices"
-          headerActions={
-            <Button
-                size="sm"
-                className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => setShowAddDialog(true)}
-            >
-              <Plus className="h-4 w-4" /> New Invoice
-            </Button>
-          }
-      >
-        {/* Add Invoice Dialog */}
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Invoice</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-2">
-                <Label>Client *</Label>
-                <Select value={form.clientId} onValueChange={(v) => setForm({ ...form, clientId: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
-                        </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Amount *</Label>
-                <Input
-                    type="number"
-                    placeholder="e.g. 5000"
-                    value={form.amount}
-                    onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Due Date *</Label>
-                <Input
-                    type="date"
-                    value={form.dueDate}
-                    onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                <X className="h-4 w-4 mr-1" /> Cancel
-              </Button>
-              <Button
-                  onClick={handleAddInvoice}
-                  disabled={saving || !form.clientId || !form.amount || !form.dueDate}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                {saving ? "Saving..." : "Create Invoice"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+    <DashboardLayout title="Invoices">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className={`${ds.font["2xl"]} ${ds.weight.semibold} ${ui.primary}`}>Invoices</h1>
+          <p className={`${ds.font.sm} ${ui.muted}`}>Manage your billing and collections</p>
+        </div>
+        <Button className={ui.btnPrimary} onClick={() => setShowCreate(true)}>
+          <Plus className="w-4 h-4 mr-2" /> New Invoice
+        </Button>
+      </div>
 
-        <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="rounded-xl border border-border bg-card shadow-card"
-        >
-          <div className="flex flex-col gap-4 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-1 rounded-lg bg-secondary p-1">
-              {filterTabs.map((tab) => (
-                  <button
-                      key={tab.value}
-                      onClick={() => setActiveFilter(tab.value)}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                          activeFilter === tab.value
-                              ? "bg-card text-foreground shadow-sm"
-                              : "text-muted-foreground hover:text-foreground"
-                      }`}
-                  >
-                    {tab.label}
-                    <span className="ml-1.5 text-xs text-muted-foreground">
-                  ({counts[tab.value as keyof typeof counts] ?? 0})
-                </span>
-                  </button>
-              ))}
-            </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                  placeholder="Search invoices..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-9 w-[240px] pl-9 text-sm"
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-[#111] border border-[rgba(255,255,255,0.12)] rounded-xl p-5 space-y-4">
+            <h2 className="text-lg font-semibold text-white">Create Invoice</h2>
+
+            <div className="space-y-3">
+              <select
+                value={form.clientId}
+                onChange={(e) => setForm((prev) => ({ ...prev, clientId: e.target.value }))}
+                className={ui.input}
+              >
+                <option value="">Select client</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={String(c.id)}>{c.name}</option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                placeholder="Amount"
+                value={form.amount}
+                onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+                className={ui.input}
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="date"
+                  value={form.issueDate}
+                  onChange={(e) => setForm((prev) => ({ ...prev, issueDate: e.target.value }))}
+                  className={ui.input}
+                />
+                <input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => setForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                  className={ui.input}
+                />
+              </div>
+
+              <input
+                placeholder="Description"
+                value={form.description}
+                onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+                className={ui.input}
               />
             </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button onClick={() => void handleCreateInvoice()} disabled={creating} className={ui.btnPrimary}>
+                {creating ? "Creating..." : "Create Invoice"}
+              </Button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {error && (
-              <div className="p-5 text-sm text-destructive">
-                ⚠️ Failed to load invoices: {error}
-              </div>
-          )}
+      <div className={`${ui.card} overflow-visible`}>
+        <div className="p-4 border-b border-[rgba(255,255,255,0.06)] flex justify-between items-center">
+          <div className="flex gap-2">
+            {["all", "paid", "pending", "overdue"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f as InvoiceStatus | "all")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${filter === f ? "bg-[#222] text-white" : ui.muted + " hover:text-white"}`}
+              >
+                {f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              placeholder="Search invoices..."
+              className={ui.input + " pl-9 w-64"}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Invoice</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Client</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Amount</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Due Date</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">Loading invoices...</TableCell>
-                  </TableRow>
-              ) : filtered.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">No invoices found.</TableCell>
-                  </TableRow>
-              ) : (
-                  filtered.map((inv) => (
-                      <TableRow key={inv.id} className="group">
-                        <TableCell className="font-medium text-foreground">#{inv.id}</TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{getClientName(inv.client)}</p>
-                            <p className="text-xs text-muted-foreground">{getClientEmail(inv.client)}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">${inv.amount?.toLocaleString()}</TableCell>
-                        <TableCell><StatusBadge status={inv.status} /></TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-44">
-                              <DropdownMenuItem className="gap-2 text-sm"><Eye className="h-3.5 w-3.5" /> View</DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 text-sm"><Pencil className="h-3.5 w-3.5" /> Edit</DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 text-sm"><Send className="h-3.5 w-3.5" /> Send</DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2 text-sm"><Download className="h-3.5 w-3.5" /> Download PDF</DropdownMenuItem>
-                              {inv.status !== "paid" && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                        onClick={() => handleMarkPaid(inv.id)}
-                                        className="gap-2 text-sm text-green-600 font-medium"
-                                    >
-                                      <CheckCircle className="h-3.5 w-3.5" /> Mark as Paid
-                                    </DropdownMenuItem>
-                                  </>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                  onClick={() => handleDelete(inv.id)}
-                                  className="gap-2 text-sm text-destructive"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                  ))
-              )}
-            </TableBody>
-          </Table>
-        </motion.div>
-      </DashboardLayout>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className={`text-[11px] uppercase tracking-wider ${ui.muted} border-b ${ui.divider}`}>
+              <th className="p-4 font-medium">Invoice</th>
+              <th className="p-4 font-medium">Client</th>
+              <th className="p-4 font-medium text-right">Amount</th>
+              <th className="p-4 font-medium text-center">Status</th>
+              <th className="p-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td className="p-4 text-sm text-gray-400" colSpan={5}>Loading invoices...</td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td className="p-4 text-sm text-gray-400" colSpan={5}>No invoices found.</td>
+              </tr>
+            ) : (
+              <AnimatePresence>
+                {filtered.map((inv) => (
+                <motion.tr
+                  key={inv.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className={`border-b ${ui.divider} last:border-0 hover:bg-[rgba(255,255,255,0.02)] relative`}
+                >
+                  <td className="p-4 font-mono text-xs text-white">{inv.number}</td>
+                  <td className="p-4 text-sm text-gray-300">{inv.client}</td>
+                  <td className="p-4 text-sm font-semibold text-right text-white">{fmt(inv.amount)}</td>
+                  <td className="p-4 text-center"><StatusBadge status={inv.status} /></td>
+                  <td className="p-4 text-right relative">
+                    <button
+                      onClick={() => setActiveMenu(activeMenu === inv.id ? null : inv.id)}
+                      className="p-1 hover:bg-[#222] rounded-md transition-colors text-gray-500 hover:text-white"
+                    >
+                      <MoreHorizontal size={18} />
+                    </button>
+
+                    {activeMenu === inv.id && (
+                      <div className="absolute right-4 top-12 z-[100] w-44 bg-[#0f0f0f] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-2xl p-1 text-left">
+                        <button
+                          onClick={() => void handleMarkAsPaid(inv.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-[#1a1a1a] hover:text-[#5DCAA5] rounded-md"
+                        >
+                          <CheckCircle size={14} /> Mark as Paid
+                        </button>
+                        <button className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-300 hover:bg-[#1a1a1a] hover:text-white rounded-md">
+                          <Download size={14} /> Download PDF
+                        </button>
+                        <div className="h-px bg-[rgba(255,255,255,0.06)] my-1" />
+                        <button
+                          onClick={() => void handleDelete(inv.id)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#F05252] hover:bg-[rgba(240,82,82,0.1)] rounded-md"
+                        >
+                          <Trash2 size={14} /> Delete Invoice
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                  </motion.tr>
+                ))}
+              </AnimatePresence>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </DashboardLayout>
   );
-};
-
-export default Invoices;
+}
