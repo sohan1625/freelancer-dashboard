@@ -436,7 +436,7 @@ export default function Index() {
                 <div className="flex items-center gap-2">
                     <button onClick={() => navigate("/recurring-invoices")} className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,83,0,0.2)] bg-[rgba(255,83,0,0.08)] px-4 py-2 text-[12px] font-semibold text-[#c45a22] transition hover:bg-[rgba(255,83,0,0.12)]">
                         <Clock3 className="h-4 w-4" />
-                        Recurring
+                        Recurring invoices
                     </button>
                     <button onClick={() => navigate("/invoices")} className="inline-flex items-center gap-2 rounded-full bg-[#ff5300] px-4 py-2 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(255,83,0,0.24)] transition hover:brightness-105">
                         <Plus className="h-4 w-4" />

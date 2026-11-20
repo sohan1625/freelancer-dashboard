@@ -2,7 +2,7 @@
 import {
   LayoutDashboard, FileText, Users,
   FolderOpen, Receipt, BarChart3, Settings, LogOut,
-  Zap,
+  Zap, Repeat,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
@@ -19,6 +19,7 @@ function handleLogout() {
 const navMain = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/" },
   { label: "Invoices", icon: FileText, path: "/invoices", alert: true },
+  { label: "Recurring", icon: Repeat, path: "/recurring-invoices" },
   { label: "Clients", icon: Users, path: "/clients" },
   { label: "Projects", icon: FolderOpen, path: "/projects" },
   { label: "Expenses", icon: Receipt, path: "/expenses" },
