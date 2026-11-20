@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiDelete, apiGet, apiPatch, ApiError } from "@/lib/api";
+import { useTheme } from "@/hooks/useTheme";
 
 import { ds, tk } from "@/lib/ds";
 
@@ -18,9 +19,9 @@ type Profile = {
 };
 
 // ─── Password Field Component ─────────────────────────────────────────────────
-function PasswordInput({ value, onChange, placeholder, id }: { value: string; onChange: (v: string) => void; placeholder: string; id: string; }) {
+function PasswordInput({ value, onChange, placeholder, id, dark }: { value: string; onChange: (v: string) => void; placeholder: string; id: string; dark: boolean; }) {
   const [show, setShow] = useState(false);
-  const ui = tk(true);
+  const ui = tk(dark);
 
   return (
       <div className="relative">
@@ -36,7 +37,7 @@ function PasswordInput({ value, onChange, placeholder, id }: { value: string; on
         <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717a] hover:text-white transition-colors"
+            className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${dark ? "text-[#71717a] hover:text-white" : "text-[#a1a1aa] hover:text-[#09090b]"}`}
         >
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
@@ -46,7 +47,9 @@ function PasswordInput({ value, onChange, placeholder, id }: { value: string; on
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Settings() {
-  const ui = tk(true);
+  const { theme } = useTheme();
+  const dark = theme === "dark";
+  const ui = tk(dark);
   const [activeTab, setActiveTab] = useState<"profile" | "business" | "billing">("profile");
 
   const [profile, setProfile] = useState<Profile>({ name: "", email: "" });
@@ -177,7 +180,9 @@ export default function Settings() {
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`flex items-center gap-3 px-4 py-2.5 ${ds.radius.md} ${ds.font.sm} ${ds.weight.medium} transition-colors ${
-                          activeTab === tab ? "bg-[#222] text-white" : `${ui.secondary} hover:bg-[#141414] hover:text-white`
+                          activeTab === tab
+                              ? dark ? "bg-[#222] text-white" : "bg-[rgba(0,0,0,0.08)] text-[#09090b]"
+                              : dark ? `${ui.secondary} hover:bg-[#141414] hover:text-white` : `${ui.secondary} hover:bg-[rgba(0,0,0,0.04)] hover:text-[#09090b]`
                       }`}
                   >
                     {tab === "profile" && <User className="w-4 h-4" />}
@@ -237,17 +242,17 @@ export default function Settings() {
                     <div className="space-y-5">
                       <div className="space-y-2">
                         <Label className={ui.secondary}>Current Password</Label>
-                        <PasswordInput id="old-pwd" value={oldPassword} onChange={(v) => { setOldPassword(v); setPasswordErrors(p => ({...p, old: ""})); }} placeholder="Enter current password" />
+                       <PasswordInput dark={dark} id="old-pwd" value={oldPassword} onChange={(v) => { setOldPassword(v); setPasswordErrors(p => ({...p, old: ""})); }} placeholder="Enter current password" />
                         {passwordErrors.old && <p className={`${ds.font.xs} text-[#F05252]`}>{passwordErrors.old}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label className={ui.secondary}>New Password</Label>
-                        <PasswordInput id="new-pwd" value={newPassword} onChange={(v) => { setNewPassword(v); setPasswordErrors(p => ({...p, new: ""})); }} placeholder="Min. 6 characters" />
+                        <PasswordInput dark={dark} id="new-pwd" value={newPassword} onChange={(v) => { setNewPassword(v); setPasswordErrors(p => ({...p, new: ""})); }} placeholder="Min. 6 characters" />
                         {passwordErrors.new && <p className={`${ds.font.xs} text-[#F05252]`}>{passwordErrors.new}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label className={ui.secondary}>Confirm Password</Label>
-                        <PasswordInput id="conf-pwd" value={confirmPassword} onChange={(v) => { setConfirmPassword(v); setPasswordErrors(p => ({...p, confirm: ""})); }} placeholder="Repeat new password" />
+                        <PasswordInput dark={dark} id="conf-pwd" value={confirmPassword} onChange={(v) => { setConfirmPassword(v); setPasswordErrors(p => ({...p, confirm: ""})); }} placeholder="Repeat new password" />
                         {passwordErrors.confirm && <p className={`${ds.font.xs} text-[#F05252]`}>{passwordErrors.confirm}</p>}
                       </div>
                       <div className="flex justify-end pt-2">

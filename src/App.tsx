@@ -5,6 +5,7 @@ import React from "react";
 
 import Index from "./pages/Index.tsx";
 import InvoicesPage from "@/pages/Invoices";
+import RecurringInvoicesPage from "@/pages/RecurringInvoices";
 import Clients from "./pages/Clients.tsx";
 import ClientDetail from "./pages/ClientDetail.tsx";
 import Projects from "./pages/Projects.tsx";
@@ -42,7 +43,14 @@ export default function App() {
                                 : <Login />
                         }
                     />
-                    <Route path="/register" element={<Register />} />
+                    <Route
+                        path="/register"
+                        element={
+                            localStorage.getItem("accessToken")
+                                ? <Navigate to="/" replace />
+                                : <Register />
+                        }
+                    />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/portal/:token" element={<ClientPortal />} />
@@ -52,6 +60,7 @@ export default function App() {
                     <Route path="/clients" element={<RequireAuth><Clients /></RequireAuth>} />
                     <Route path="/clients/:id" element={<RequireAuth><ClientDetail /></RequireAuth>} />
                     <Route path="/invoices" element={<RequireAuth><InvoicesPage /></RequireAuth>} />
+                    <Route path="/recurring-invoices" element={<RequireAuth><RecurringInvoicesPage /></RequireAuth>} />
                     <Route path="/projects" element={<RequireAuth><Projects /></RequireAuth>} />
                     <Route path="/expenses" element={<RequireAuth><Expenses /></RequireAuth>} />
                     <Route path="/reports" element={<RequireAuth><Reports /></RequireAuth>} />

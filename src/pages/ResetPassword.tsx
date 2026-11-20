@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Zap, ArrowRight, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import { validateEmail, validatePassword } from "@/lib/validation";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
@@ -20,16 +21,16 @@ export default function ResetPassword() {
 
     function validate(): boolean {
         const newErrors: { email?: string; password?: string; confirm?: string } = {};
-        if (!email) {
-            newErrors.email = "Email is required.";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            newErrors.email = "Please enter a valid email address.";
+        const emailResult = validateEmail(email);
+        if (!emailResult.valid) {
+            newErrors.email = emailResult.error;
         }
-        if (!password) {
-            newErrors.password = "Password is required.";
-        } else if (password.length < 6) {
-            newErrors.password = "Password must be at least 6 characters.";
+
+        const passwordResult = validatePassword(password, undefined, email);
+        if (!passwordResult.valid) {
+            newErrors.password = passwordResult.error;
         }
+
         if (!confirm) {
             newErrors.confirm = "Please confirm your password.";
         } else if (password !== confirm) {

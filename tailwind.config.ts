@@ -7,39 +7,53 @@ export default {
   ],
   theme: {
     extend: {
-
       colors: {
-        /* CORE TOKENS (linked to CSS variables) */
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        card: "hsl(var(--card))",
-        border: "hsl(var(--border))",
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+          green: "#22c55e",
+          yellow: "#f59e0b",
+          red: "#ef4444",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
 
         /* EXTRA DESIGN COLORS */
         surface: "#111111",
         surfaceLight: "#161616",
-
         borderStrong: "rgba(255,255,255,0.12)",
 
         text: {
           primary: "#ffffff",
           secondary: "#a1a1aa",
           muted: "#71717a",
-        },
-
-
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ["Geist", "system-ui", "sans-serif"],
-            },
-          },
-        },
-
-        accent: {
-          green: "#22c55e",
-          yellow: "#f59e0b",
-          red: "#ef4444",
         },
       },
 
@@ -52,9 +66,8 @@ export default {
       },
 
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["Geist", "Inter", "system-ui", "sans-serif"],
       },
-
     },
   },
   plugins: [],

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Zap, ArrowLeft, CheckCircle } from "lucide-react";
+import { validateEmail } from "@/lib/validation";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
@@ -13,13 +14,20 @@ export default function ForgotPassword() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError(null);
+
+        const emailResult = validateEmail(email);
+        if (!emailResult.valid) {
+            setError(emailResult.error || "Please enter a valid email address.");
+            return;
+        }
+
         setLoading(true);
 
         try {
             const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
+                body: JSON.stringify({ email: email.trim().toLowerCase() }),
             });
 
             if (!res.ok) {

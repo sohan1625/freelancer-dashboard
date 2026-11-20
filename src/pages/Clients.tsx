@@ -295,9 +295,9 @@ export default function ClientsPage() {
   const totalBilled = clients.reduce((s, c) => s + c.totalBilled, 0);
   const totalOutstanding = clients.reduce((s, c) => s + (c.totalBilled - c.totalPaid), 0);
 
-  const border = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
-  const textPrimary = dark ? "#e0e0e0" : "#111";
-  const textMuted = dark ? "#555" : "#aaa";
+  const border = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)";
+  const textPrimary = dark ? "#ffffff" : "#111";
+  const textMuted = dark ? "#a1a1aa" : "#71717a";
   const cardBg = dark ? "#111111" : "#f8f8f8";
   const rowHover = dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)";
 

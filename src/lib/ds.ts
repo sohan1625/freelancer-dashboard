@@ -48,9 +48,9 @@ export const ds = {
         borderStrong: "rgba(255,255,255,0.14)",
         text: {
             primary:   "#ffffff",
-            secondary: "#b2b2bc",
-            muted:     "#8a8a95",
-            dim:       "#5c5c67",
+            secondary: "#e4e4e7",
+            muted:     "#a1a1aa",
+            dim:       "#71717a",
         },
     },
     light: {
@@ -64,8 +64,8 @@ export const ds = {
         text: {
             primary:   "#09090b",
             secondary: "#52525b",
-            muted:     "#a1a1aa",
-            dim:       "#d4d4d8",
+            muted:     "#71717a",
+            dim:       "#a1a1aa",
         },
     },
 } as const;
@@ -84,9 +84,9 @@ export function tk(dark: boolean) {
 
         // Text helpers
         primary:   dark ? "text-white"       : "text-[#09090b]",
-        secondary: dark ? "text-[#a1a1aa]"   : "text-[#52525b]",
-        muted:     dark ? "text-[#71717a]"   : "text-[#a1a1aa]",
-        dim:       dark ? "text-[#3f3f46]"   : "text-[#d4d4d8]",
+        secondary: dark ? "text-[#e4e4e7]"   : "text-[#52525b]",
+        muted:     dark ? "text-[#a1a1aa]"   : "text-[#71717a]",
+        dim:       dark ? "text-[#71717a]"   : "text-[#a1a1aa]",
 
         // Divider
         divider: dark ? "border-[rgba(255,255,255,0.06)]" : "border-[rgba(0,0,0,0.06)]",

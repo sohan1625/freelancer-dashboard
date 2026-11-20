@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import { validateEmail, validatePassword, evaluatePassword } from "@/lib/validation";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
@@ -14,18 +15,23 @@ type FormErrors = {
 function validate(name: string, email: string, password: string): FormErrors {
     const errors: FormErrors = {};
 
-    if (!name.trim()) errors.username = "Username is required.";
-
-    if (!email.trim()) {
-        errors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errors.email = "Enter a valid email address.";
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        errors.username = "Username is required.";
+    } else if (trimmedName.length < 3 || trimmedName.length > 50) {
+        errors.username = "Username must be between 3 and 50 characters.";
+    } else if (!/^[a-zA-Z0-9_.-]+$/.test(trimmedName)) {
+        errors.username = "Username can only contain letters, numbers, underscores, hyphens, and dots.";
     }
 
-    if (!password) {
-        errors.password = "Password is required.";
-    } else if (password.length < 6) {
-        errors.password = "Password must be at least 6 characters.";
+    const emailResult = validateEmail(email);
+    if (!emailResult.valid) {
+        errors.email = emailResult.error;
+    }
+
+    const passwordResult = validatePassword(password, name, email);
+    if (!passwordResult.valid) {
+        errors.password = passwordResult.error;
     }
 
     return errors;
@@ -43,6 +49,8 @@ export default function RegisterPage() {
     const [registerState, setRegisterState] = useState<"idle" | "loading" | "success">("idle");
     const [errors, setErrors] = useState<FormErrors>({});
     const [serverError, setServerError] = useState<string | null>(null);
+
+    const passwordCriteria = useMemo(() => evaluatePassword(password), [password]);
 
     useEffect(() => {
         const canvas = auroraRef.current;
@@ -318,7 +326,7 @@ export default function RegisterPage() {
                                         setPassword(e.target.value);
                                         clearFieldError("password");
                                     }}
-                                    placeholder="Min. 6 characters"
+                                    placeholder="Min. 8 chars (A-Z, a-z, 0-9, symbol)"
                                     className="w-full pl-9 pr-14 py-[9px] border border-[#e3e3e3] rounded-[9px] text-[13.5px] text-[#222] bg-[#fafafa] outline-none transition-all focus:border-[#5DCAA5] focus:bg-white focus:shadow-[0_0_0_3px_rgba(93,202,165,0.15)]"
                                     autoComplete="new-password"
                                 />
@@ -332,6 +340,53 @@ export default function RegisterPage() {
                                 </button>
                             </div>
                             {errors.password ? <p className="mt-1 text-xs text-[#a54e4e]">{errors.password}</p> : null}
+
+                            {password.length > 0 && (
+                                <div className="mt-2 p-2.5 rounded-[9px] bg-[#f9f9f9] border border-[#eeeeee] flex flex-col gap-2">
+                                    <div className="flex items-center justify-between text-[11px]">
+                                        <span className="text-[#666] font-medium">Security Strength:</span>
+                                        <span className={`font-semibold ${
+                                            passwordCriteria.strength === "Strong" ? "text-emerald-600" :
+                                            passwordCriteria.strength === "Fair" ? "text-amber-600" :
+                                            passwordCriteria.strength === "Weak" ? "text-orange-600" : "text-rose-600"
+                                        }`}>
+                                            {passwordCriteria.strength}
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-[#e5e5e5] rounded-full overflow-hidden flex">
+                                        <div
+                                            className={`h-full transition-all duration-300 rounded-full ${
+                                                passwordCriteria.score <= 2 ? "bg-rose-500" :
+                                                passwordCriteria.score <= 3 ? "bg-amber-500" :
+                                                passwordCriteria.score === 4 ? "bg-lime-500" : "bg-emerald-500"
+                                            }`}
+                                            style={{ width: `${Math.min(100, (passwordCriteria.score / 5) * 100)}%` }}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-1.5 text-[10.5px]">
+                                        <span className={`flex items-center gap-1 ${passwordCriteria.minLength ? "text-emerald-700 font-medium" : "text-[#888]"}`}>
+                                            {passwordCriteria.minLength ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#bbb] mx-1" />}
+                                            8+ characters
+                                        </span>
+                                        <span className={`flex items-center gap-1 ${passwordCriteria.hasUpper ? "text-emerald-700 font-medium" : "text-[#888]"}`}>
+                                            {passwordCriteria.hasUpper ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#bbb] mx-1" />}
+                                            Uppercase (A-Z)
+                                        </span>
+                                        <span className={`flex items-center gap-1 ${passwordCriteria.hasLower ? "text-emerald-700 font-medium" : "text-[#888]"}`}>
+                                            {passwordCriteria.hasLower ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#bbb] mx-1" />}
+                                            Lowercase (a-z)
+                                        </span>
+                                        <span className={`flex items-center gap-1 ${passwordCriteria.hasNumber ? "text-emerald-700 font-medium" : "text-[#888]"}`}>
+                                            {passwordCriteria.hasNumber ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#bbb] mx-1" />}
+                                            Number (0-9)
+                                        </span>
+                                        <span className={`flex items-center gap-1 col-span-2 ${passwordCriteria.hasSpecial ? "text-emerald-700 font-medium" : "text-[#888]"}`}>
+                                            {passwordCriteria.hasSpecial ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-[#bbb] mx-1" />}
+                                            Special character (!@#$%^&*)
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

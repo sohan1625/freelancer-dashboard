@@ -57,7 +57,7 @@ export function AppSidebar({ theme }: { theme: "dark" | "light" }) {
 
   return (
     <div
-      className={`w-[240px] flex flex-col min-h-screen flex-shrink-0 border-r transition-colors duration-200
+      className={`w-[240px] flex flex-col h-full overflow-hidden flex-shrink-0 border-r transition-colors duration-200
       ${dark
         ? "bg-[#180803] border-[rgba(255,255,255,0.05)]"
         : "bg-[rgba(255,250,245,0.78)] border-[rgba(255,255,255,0.5)] backdrop-blur-xl"}`}
@@ -194,7 +194,7 @@ export function AppSidebar({ theme }: { theme: "dark" | "light" }) {
           <p className="text-[12px] font-medium text-[#ff5300] mb-0.5">
             Upgrade to Pro
           </p>
-          <p className={`text-[11px] ${t.muted}`}>
+          <p className={`text-[12px] ${t.muted}`}>
             Unlock analytics & AI features
           </p>
         </div>

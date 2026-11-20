@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { validateEmail } from "@/lib/validation";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8081";
 
@@ -80,6 +81,25 @@ export default function LoginPage() {
 
     const handleLogin = async () => {
         if (loginState !== "idle") return;
+
+        const trimmedIdentifier = email.trim();
+        if (!trimmedIdentifier) {
+            setError("Email or username is required.");
+            return;
+        }
+
+        if (trimmedIdentifier.includes("@")) {
+            const emailRes = validateEmail(trimmedIdentifier);
+            if (!emailRes.valid) {
+                setError(emailRes.error || "Please enter a valid email address.");
+                return;
+            }
+        }
+
+        if (!password) {
+            setError("Password is required.");
+            return;
+        }
 
         setError(null);
         setLoginState("loading");
@@ -229,6 +249,13 @@ export default function LoginPage() {
                             {loginState === "loading" && <span>Signing in...</span>}
                             {loginState === "success" && <span>Success!</span>}
                         </button>
+
+                        <p className="text-center text-[12px] text-[#999] mt-4">
+                            Don&apos;t have an account?{" "}
+                            <Link to="/register" className="text-[#c1440e] font-medium no-underline">
+                                Sign up
+                            </Link>
+                        </p>
                     </div>
                 </div>
 
